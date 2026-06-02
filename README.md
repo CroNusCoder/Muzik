@@ -1,18 +1,24 @@
-# 🎵 Music App — Setup Guide
+# 🎵 Muzik
 
-Black/white retro-clean music app built on YouTube Music (InnerTube) + React Native.
+A premium, minimal, retro-clean music application for Android. Powered by a custom JioSaavn API worker and built with React Native.
+
+<p align="left">
+  <a href="https://github.com/CroNusCoder/Muzik/releases/download/v1.0/app-release.apk">
+    <img src="https://img.shields.io/badge/Download-APK%20for%20Android-black?style=for-the-badge&logo=android&logoColor=green" alt="Download APK" />
+  </a>
+</p>
 
 ---
 
 ## Tech Stack
 
-| Layer | Library |
+| Layer | Library / Engine |
 |---|---|
-| Music data | `youtubei.js` |
+| Music data | Custom JioSaavn Worker API (`jiosaavn-api.parthasarathisrivastava.workers.dev`) |
 | Audio playback | `react-native-track-player` |
-| Lyrics | `lrclib.net` (free, no key) |
+| Lyrics | `lrclib.net` (free, synced and plain text support) |
 | State | `zustand` |
-| Local storage | `@react-native-async-storage/async-storage` |
+| Local storage | `@react-native-async-storage/async-storage` (history and stats logging) |
 | Fonts | Playfair Display (serif) + Space Mono (mono) |
 
 ---
@@ -30,9 +36,9 @@ cd MusicApp
 
 ```bash
 npm install \
-  youtubei.js \
   react-native-track-player \
   @react-native-async-storage/async-storage \
+  react-native-safe-area-context \
   zustand
 ```
 
@@ -113,7 +119,7 @@ src/
 │   └── player/     ← MiniPlayer, FullPlayer
 ├── screens/        ← HomeScreen, SearchScreen, LibraryScreen
 ├── navigation/     ← AppNavigator (tabs + modals)
-├── services/       ← innertube.ts, lyrics.ts, stats.ts, trackPlayer.ts
+├── services/       ← innertube.ts (JioSaavn client), lyrics.ts, stats.ts, trackPlayer.ts
 └── store/          ← playerStore.ts (Zustand)
 ```
 
@@ -123,7 +129,8 @@ src/
 
 | Screen | What it shows |
 |---|---|
-| Home | YouTube Music feed — Quick Picks, trending sections |
-| Search | Song search with suggestions |
+| Home | Trending Hits, Bollywood Romance, Global Pop, and Lo-Fi Chillout feeds |
+| Search | Global track search from JioSaavn with clean HTML entity parsing |
 | Now Playing | Fullscreen lyrics (synced if available, plain otherwise, ♪ if none) |
-| Library | Total songs played, total minutes, recent history |
+| Library | Total songs played, total minutes, recent history statistics |
+
