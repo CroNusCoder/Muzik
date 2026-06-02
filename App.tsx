@@ -1,45 +1,48 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import TrackPlayer from 'react-native-track-player';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { setupPlayer } from './src/services/trackPlayer';
+import { AppNavigator } from './src/navigation/AppNavigator';
+import { Colors } from './src/theme';
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+export default function App() {
+  const [ready, setReady] = useState(false);
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+  useEffect(() => {
+    const init = async () => {
+      await setupPlayer();
+      setReady(true);
+    };
+    init();
+  }, []);
+
+  if (!ready) {
+    return (
+      <View style={styles.splash}>
+        <Text style={styles.splashText}>MUZIK</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <AppNavigator />
     </SafeAreaProvider>
   );
 }
 
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: {
+  splash: {
     flex: 1,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splashText: {
+    fontFamily: 'PlayfairDisplay-Bold',
+    fontSize: 48,
+    color: Colors.white,
+    letterSpacing: 12,
   },
 });
-
-export default App;

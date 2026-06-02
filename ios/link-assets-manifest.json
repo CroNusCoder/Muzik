@@ -1,0 +1,41 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/PlayfairDisplay-Bold.ttf",
+      "sha1": "fa5602336a70e371a40847538d1784afe0d4846f"
+    },
+    {
+      "path": "assets/fonts/PlayfairDisplay-BoldItalic.ttf",
+      "sha1": "1a57f5792a4386c11c315b5590261c3cd58bf22b"
+    },
+    {
+      "path": "assets/fonts/PlayfairDisplay-Italic.ttf",
+      "sha1": "bd56ac7f1d02fa7c69799712aab7f024bd8af06e"
+    },
+    {
+      "path": "assets/fonts/PlayfairDisplay-Medium.ttf",
+      "sha1": "bb57192d4fef4fa6f9145e1b08c42ca36f88c0bc"
+    },
+    {
+      "path": "assets/fonts/PlayfairDisplay-Regular.ttf",
+      "sha1": "8f5078f4236c9d2c8cce7cb7255bba236a5103ac"
+    },
+    {
+      "path": "assets/fonts/PlayfairDisplay-SemiBold.ttf",
+      "sha1": "d54c2895efe22f3262b61636c8e67e85d02388b5"
+    },
+    {
+      "path": "assets/fonts/SpaceMono-Bold.ttf",
+      "sha1": "05ffd6dc9a45dcf494091c7799823d1bf72b92dc"
+    },
+    {
+      "path": "assets/fonts/SpaceMono-Italic.ttf",
+      "sha1": "544172a837274aedbcdb51b608b2a2838f5309f5"
+    },
+    {
+      "path": "assets/fonts/SpaceMono-Regular.ttf",
+      "sha1": "b7dd25e404c17b7d664598f3ab8fac16dd633b50"
+    }
+  ]
+}
