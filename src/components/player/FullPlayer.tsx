@@ -11,6 +11,7 @@ import TrackPlayer, {
   usePlaybackState,
   useProgress,
   State,
+  RepeatMode,
 } from 'react-native-track-player';
 import { usePlayerStore } from '../../store/playerStore';
 import { Colors, Spacing, FontSizes, Layout } from '../../theme';
@@ -53,7 +54,17 @@ const MusicSymbol: React.FC = () => {
 };
 
 export const FullPlayer: React.FC<FullPlayerProps> = ({ onClose }) => {
-  const { currentSong, lyrics, lyricsLoading, playNext, playPrev } = usePlayerStore();
+  const {
+    currentSong,
+    lyrics,
+    lyricsLoading,
+    playNext,
+    playPrev,
+    isShuffle,
+    repeatMode,
+    toggleShuffle,
+    toggleRepeatMode,
+  } = usePlayerStore();
   const playbackState = usePlaybackState();
   const progress = useProgress(500);
   const isPlaying = playbackState.state === State.Playing;
@@ -184,6 +195,17 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onClose }) => {
 
       {/* ── Controls ───────────────────────────── */}
       <View style={styles.controls}>
+        {/* Shuffle */}
+        <TouchableOpacity onPress={toggleShuffle} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
+          <Text
+            family="mono"
+            size="md"
+            color={isShuffle ? Colors.white : Colors.textMuted}
+          >
+            ⇄
+          </Text>
+        </TouchableOpacity>
+
         {/* Prev */}
         <TouchableOpacity onPress={playPrev} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
           <Text family="mono" size="lg" color={Colors.textSecondary}>◀◀</Text>
@@ -199,6 +221,29 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onClose }) => {
         {/* Next */}
         <TouchableOpacity onPress={playNext} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
           <Text family="mono" size="lg" color={Colors.textSecondary}>▶▶</Text>
+        </TouchableOpacity>
+
+        {/* Repeat */}
+        <TouchableOpacity onPress={toggleRepeatMode} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text
+              family="mono"
+              size="md"
+              color={repeatMode !== RepeatMode.Off ? Colors.white : Colors.textMuted}
+            >
+              ⟳
+            </Text>
+            {repeatMode === RepeatMode.Track && (
+              <Text
+                family="mono"
+                size="xs"
+                color={Colors.white}
+                style={{ fontSize: 9, marginLeft: 1, position: 'absolute', right: -6, top: -2 }}
+              >
+                1
+              </Text>
+            )}
+          </View>
         </TouchableOpacity>
       </View>
 
