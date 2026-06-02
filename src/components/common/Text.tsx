@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text as RNText, TextStyle, StyleSheet } from 'react-native';
+import { Text as RNText, TextStyle, StyleSheet, LayoutChangeEvent } from 'react-native';
 import { Colors, Typography, FontSizes } from '../../theme';
 
 type FontFamily = 'serif' | 'mono';
@@ -17,6 +17,7 @@ interface TextProps {
   letterSpacing?: number;
   uppercase?: boolean;
   align?: 'left' | 'center' | 'right';
+  onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 const getFontFamily = (family: FontFamily, weight: Weight): string => {
@@ -51,12 +52,14 @@ export const Text: React.FC<TextProps> = ({
   letterSpacing,
   uppercase = false,
   align = 'left',
+  onLayout,
 }) => {
   const fontFamily = getFontFamily(family, weight);
 
   return (
     <RNText
       numberOfLines={numberOfLines}
+      onLayout={onLayout}
       style={[
         {
           fontFamily,

@@ -70,6 +70,14 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onClose }) => {
   const isPlaying = playbackState.state === State.Playing;
   const lyricsRef = useRef<ScrollView>(null);
   const [activeLine, setActiveLine] = useState(0);
+  const lineYPositions = useRef<{ [key: number]: number }>({});
+
+  // Reset Y positions and scroll when lyrics change
+  useEffect(() => {
+    lineYPositions.current = {};
+    setActiveLine(0);
+    lyricsRef.current?.scrollTo({ y: 0, animated: false });
+  }, [lyrics]);
 
   // Auto-scroll lyrics to active line
   useEffect(() => {
@@ -84,12 +92,15 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onClose }) => {
 
     if (idx !== activeLine) {
       setActiveLine(idx);
-      lyricsRef.current?.scrollTo({
-        y: Math.max(0, idx * 52 - SCREEN_HEIGHT * 0.3),
-        animated: true,
-      });
+      const targetY = lineYPositions.current[idx];
+      if (targetY !== undefined) {
+        lyricsRef.current?.scrollTo({
+          y: Math.max(0, targetY - SCREEN_HEIGHT * 0.25),
+          animated: true,
+        });
+      }
     }
-  }, [progress.position, lyrics]);
+  }, [progress.position, lyrics, activeLine]);
 
   const togglePlay = async () => {
     if (isPlaying) await TrackPlayer.pause();
@@ -159,6 +170,9 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onClose }) => {
                 active={lyrics.synced ? i === activeLine : false}
                 style={styles.lyricLine}
                 align="center"
+                onLayout={(e) => {
+                  lineYPositions.current[i] = e.nativeEvent.layout.y;
+                }}
               >
                 {line.text}
               </LyricLine>
@@ -199,7 +213,7 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onClose }) => {
         <TouchableOpacity onPress={toggleShuffle} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
           <Text
             family="mono"
-            size="md"
+            size="xl"
             color={isShuffle ? Colors.white : Colors.textMuted}
           >
             ⇄
@@ -228,7 +242,7 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onClose }) => {
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text
               family="mono"
-              size="md"
+              size="xl"
               color={repeatMode !== RepeatMode.Off ? Colors.white : Colors.textMuted}
             >
               ⟳
@@ -238,7 +252,7 @@ export const FullPlayer: React.FC<FullPlayerProps> = ({ onClose }) => {
                 family="mono"
                 size="xs"
                 color={Colors.white}
-                style={{ fontSize: 9, marginLeft: 1, position: 'absolute', right: -6, top: -2 }}
+                style={{ fontSize: 10, marginLeft: 1, position: 'absolute', right: -8, top: -4 }}
               >
                 1
               </Text>
