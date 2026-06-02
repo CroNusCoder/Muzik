@@ -4,6 +4,7 @@ import TrackPlayer from 'react-native-track-player';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { setupPlayer } from './src/services/trackPlayer';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { checkAppUpdate } from './src/services/updateChecker';
 import { Colors } from './src/theme';
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
     const init = async () => {
       await setupPlayer();
       setReady(true);
+      checkAppUpdate();
     };
     init();
   }, []);
