@@ -3,7 +3,7 @@
 A premium, minimal, retro-clean music application for Android. Powered by a custom JioSaavn API worker and built with React Native.
 
 <p align="left">
-  <a href="https://github.com/CroNusCoder/Muzik/releases/download/v1.0/muzik.apk">
+  <a href="https://github.com/CroNusCoder/Muzik/releases/download/v1.1/muzik.apk">
     <img src="https://img.shields.io/badge/Download-APK%20for%20Android-black?style=for-the-badge&logo=android&logoColor=green" alt="Download APK" />
   </a>
 </p>
