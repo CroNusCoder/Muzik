@@ -1,6 +1,6 @@
 import { Alert, Linking } from 'react-native';
 
-const CURRENT_VERSION = 'v1.3'; // Production release baseline version
+const CURRENT_VERSION = 'v1.4'; // Production release baseline version
 
 export const checkAppUpdate = async () => {
   try {

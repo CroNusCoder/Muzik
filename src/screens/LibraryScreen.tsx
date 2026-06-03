@@ -8,6 +8,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { getStats, getHistory, type Stats, type HistoryEntry } from '../services/stats';
 import { usePlayerStore } from '../store/playerStore';
@@ -17,6 +18,7 @@ import { Divider } from '../components/common/Box';
 import { Colors, Spacing, FontSizes, BorderRadius, Layout } from '../theme';
 import { SongRow, type Song } from '../components/common/SongRow';
 import { SongMenuModal } from '../components/common/SongMenuModal';
+import { importSpotifyPlaylist } from '../services/spotify';
 
 const formatDate = (ts: number): string => {
   const d = new Date(ts);
@@ -41,12 +43,18 @@ export const LibraryScreen: React.FC = () => {
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const [playlistDetailVisible, setPlaylistDetailVisible] = useState(false);
 
+  // Spotify Import State
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgressText, setImportProgressText] = useState('');
+
   // Song Options Modal State (for recently played history songs)
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [optionsVisible, setOptionsVisible] = useState(false);
 
   const { playSong } = usePlayerStore();
-  const { playlists, loadPlaylists, createPlaylist, deletePlaylist, removeSongFromPlaylist } = usePlaylistStore();
+  const { playlists, loadPlaylists, createPlaylist, deletePlaylist, removeSongFromPlaylist, addSongToPlaylist } = usePlaylistStore();
 
   const load = useCallback(async () => {
     const [s, h] = await Promise.all([getStats(), getHistory()]);
@@ -69,6 +77,50 @@ export const LibraryScreen: React.FC = () => {
     await createPlaylist(name);
     setNewPlaylistName('');
     setCreateModalVisible(false);
+  };
+
+  const handleImportPlaylist = async () => {
+    const url = importUrl.trim();
+    if (!url) return;
+    
+    setIsImporting(true);
+    setImportProgressText('Connecting to Spotify...');
+    
+    try {
+      const result = await importSpotifyPlaylist(url, (current, total, songTitle) => {
+        setImportProgressText(`Matching track ${current} of ${total}\n"${songTitle}"`);
+      });
+      
+      if (result.matchedSongs.length === 0) {
+        Alert.alert("Import Failed", "Could not match any songs from the Spotify playlist on JioSaavn.");
+      } else {
+        // Create the local playlist
+        const playlistName = `Spotify: ${result.playlistName}`;
+        const playlistId = await createPlaylist(playlistName);
+        
+        // Add all matched songs
+        for (const song of result.matchedSongs) {
+          await addSongToPlaylist(playlistId, song);
+        }
+        
+        // Reload playlists list
+        await loadPlaylists();
+        
+        Alert.alert(
+          "Import Successful! 🎉",
+          `Imported "${result.playlistName}" playlist.\nMatched ${result.matchedSongs.length} of ${result.totalTracks} songs.`
+        );
+      }
+      
+      setImportUrl('');
+      setImportModalVisible(false);
+    } catch (err: any) {
+      console.error(err);
+      Alert.alert("Import Error", err.message || "Failed to import Spotify playlist.");
+    } finally {
+      setIsImporting(false);
+      setImportProgressText('');
+    }
   };
 
   const handlePlaylistTap = (playlist: Playlist) => {
@@ -218,9 +270,14 @@ export const LibraryScreen: React.FC = () => {
         <View style={{ height: Spacing['xl'] }} />
         <View style={styles.sectionHeaderRow}>
           <Label>YOUR PLAYLISTS</Label>
-          <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
-            <Text family="mono" size="xs" color={Colors.white} weight="bold">＋ CREATE</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.base }}>
+            <TouchableOpacity onPress={() => setCreateModalVisible(true)}>
+              <Text family="mono" size="xs" color={Colors.white} weight="bold">＋ CREATE</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setImportModalVisible(true)}>
+              <Text family="mono" size="xs" color={Colors.white} weight="bold">＋ IMPORT</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <Divider />
 
@@ -347,6 +404,65 @@ export const LibraryScreen: React.FC = () => {
                 <Text family="mono" size="xs" color={Colors.white} weight="bold">CREATE</Text>
               </TouchableOpacity>
             </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Spotify Import Dialog Modal */}
+      <Modal
+        transparent
+        visible={importModalVisible}
+        animationType="fade"
+        onRequestClose={() => { if (!isImporting) setImportModalVisible(false); }}
+      >
+        <TouchableOpacity
+          style={styles.dialogOverlay}
+          activeOpacity={1}
+          onPress={() => { if (!isImporting) setImportModalVisible(false); }}
+          disabled={isImporting}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.dialogCard}>
+            <Title>IMPORT FROM SPOTIFY</Title>
+            <Divider style={{ marginVertical: Spacing.md }} />
+            
+            {isImporting ? (
+              <View style={{ alignItems: 'center', paddingVertical: Spacing.base }}>
+                <ActivityIndicator size="small" color={Colors.white} />
+                <Text family="mono" size="xs" align="center" style={{ marginTop: Spacing.md, lineHeight: 18 }}>
+                  {importProgressText}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <TextInput
+                  style={styles.dialogInput}
+                  value={importUrl}
+                  onChangeText={setImportUrl}
+                  placeholder="Paste Spotify playlist URL..."
+                  placeholderTextColor={Colors.textMuted}
+                  autoFocus
+                  keyboardType="url"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Divider style={{ marginVertical: Spacing.md }} />
+                <View style={styles.dialogButtons}>
+                  <TouchableOpacity
+                    style={styles.dialogButton}
+                    onPress={() => { setImportModalVisible(false); setImportUrl(''); }}
+                  >
+                    <Label>CANCEL</Label>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.dialogButton, !importUrl.trim() && { opacity: 0.4 }]}
+                    onPress={handleImportPlaylist}
+                    disabled={!importUrl.trim()}
+                  >
+                    <Text family="mono" size="xs" color={Colors.white} weight="bold">IMPORT</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
