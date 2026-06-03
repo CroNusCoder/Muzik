@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,12 +7,13 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { searchSongs } from '../services/innertube';
+import { searchSongs, getSearchSuggestions } from '../services/innertube';
 import { usePlayerStore } from '../store/playerStore';
 import { SongRow, type Song } from '../components/common/SongRow';
 import { Label, Text } from '../components/common/Text';
 import { Divider } from '../components/common/Box';
-import { Colors, Spacing, FontSizes, BorderRadius } from '../theme';
+import { Colors, Spacing, FontSizes } from '../theme';
+import { SongMenuModal } from '../components/common/SongMenuModal';
 
 const SUGGESTIONS = [
   'Radiohead', 'Miles Davis', 'Pink Floyd', 'The Strokes',
@@ -24,12 +25,40 @@ export const SearchScreen: React.FC = () => {
   const [results, setResults] = useState<Song[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+
+  // Autocomplete Suggestions State
+  const [autocompleteList, setAutocompleteList] = useState<string[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
+  // Song Options Modal State
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  const [optionsVisible, setOptionsVisible] = useState(false);
+
   const { playSong } = usePlayerStore();
+
+  // Debounced autocomplete search suggestion fetcher
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed || searched) {
+      setAutocompleteList([]);
+      return;
+    }
+
+    setSuggestionsLoading(true);
+    const handler = setTimeout(async () => {
+      const suggestions = await getSearchSuggestions(trimmed);
+      setAutocompleteList(suggestions);
+      setSuggestionsLoading(false);
+    }, 250); // 250ms debounce delay
+
+    return () => clearTimeout(handler);
+  }, [query, searched]);
 
   const handleSearch = useCallback(async (q: string) => {
     if (!q.trim()) return;
     setLoading(true);
     setSearched(true);
+    setAutocompleteList([]); // Clear suggestions on search submit
     try {
       const data = await searchSongs(q.trim());
       setResults(data);
@@ -42,6 +71,16 @@ export const SearchScreen: React.FC = () => {
 
   const handlePlay = (song: Song) => {
     playSong(song, results);
+  };
+
+  const handleSongOptions = (song: Song) => {
+    setSelectedSong(song);
+    setOptionsVisible(true);
+  };
+
+  const handleSuggestionTap = (s: string) => {
+    setQuery(s);
+    handleSearch(s);
   };
 
   return (
@@ -59,7 +98,10 @@ export const SearchScreen: React.FC = () => {
         <TextInput
           style={styles.input}
           value={query}
-          onChangeText={setQuery}
+          onChangeText={(text) => {
+            setQuery(text);
+            if (searched) setSearched(false); // Reset search state if user edits query
+          }}
           onSubmitEditing={() => handleSearch(query)}
           placeholder="Artist, song, album..."
           placeholderTextColor={Colors.textMuted}
@@ -69,7 +111,7 @@ export const SearchScreen: React.FC = () => {
         />
         {query.length > 0 && (
           <TouchableOpacity
-            onPress={() => { setQuery(''); setResults([]); setSearched(false); }}
+            onPress={() => { setQuery(''); setResults([]); setSearched(false); setAutocompleteList([]); }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Label>✕</Label>
@@ -83,7 +125,7 @@ export const SearchScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Loading */}
+        {/* Loading Results */}
         {loading && (
           <View style={styles.center}>
             <ActivityIndicator color={Colors.textMuted} />
@@ -91,20 +133,49 @@ export const SearchScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Suggestions (idle state) */}
-        {!searched && !loading && (
+        {/* Live Autocomplete suggestions while typing */}
+        {query.trim().length > 0 && !searched && !loading && (
+          <View style={styles.suggestions}>
+            <View style={styles.sectionHeaderRow}>
+              <Label>SUGGESTED SEARCHES</Label>
+              {suggestionsLoading && <ActivityIndicator size="small" color={Colors.textMuted} />}
+            </View>
+            <Divider />
+            {autocompleteList.map((s) => (
+              <React.Fragment key={s}>
+                <TouchableOpacity
+                  style={styles.suggestion}
+                  onPress={() => handleSuggestionTap(s)}
+                >
+                  <View style={styles.suggestionLeft}>
+                    <Text family="mono" size="sm" color={Colors.textSecondary} style={{ marginRight: Spacing.md }}>⊙</Text>
+                    <Text family="serif" size="base">{s}</Text>
+                  </View>
+                  <Label>→</Label>
+                </TouchableOpacity>
+                <Divider />
+              </React.Fragment>
+            ))}
+          </View>
+        )}
+
+        {/* Static Suggestions (idle state - query is empty) */}
+        {query.trim().length === 0 && !searched && !loading && (
           <View style={styles.suggestions}>
             <View style={styles.sectionHeader}>
               <Label>SUGGESTIONS</Label>
             </View>
             <Divider />
-            {SUGGESTIONS.map((s, i) => (
+            {SUGGESTIONS.map((s) => (
               <React.Fragment key={s}>
                 <TouchableOpacity
                   style={styles.suggestion}
-                  onPress={() => { setQuery(s); handleSearch(s); }}
+                  onPress={() => handleSuggestionTap(s)}
                 >
-                  <Text family="serif" size="base">{s}</Text>
+                  <View style={styles.suggestionLeft}>
+                    <Text family="mono" size="sm" color={Colors.textSecondary} style={{ marginRight: Spacing.md }}>⊙</Text>
+                    <Text family="serif" size="base">{s}</Text>
+                  </View>
                   <Label>→</Label>
                 </TouchableOpacity>
                 <Divider />
@@ -121,8 +192,8 @@ export const SearchScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Results */}
-        {results.length > 0 && !loading && (
+        {/* Playable Song Results */}
+        {results.length > 0 && !loading && searched && (
           <View>
             <View style={styles.sectionHeader}>
               <Label>{results.length} RESULTS</Label>
@@ -135,6 +206,7 @@ export const SearchScreen: React.FC = () => {
                 index={i + 1}
                 showIndex
                 onPress={handlePlay}
+                onOptionsPress={handleSongOptions}
               />
             ))}
           </View>
@@ -142,6 +214,13 @@ export const SearchScreen: React.FC = () => {
 
         <View style={{ height: Spacing['4xl'] }} />
       </ScrollView>
+
+      {/* Song Options Menu Modal */}
+      <SongMenuModal
+        visible={optionsVisible}
+        song={selectedSong}
+        onClose={() => setOptionsVisible(false)}
+      />
     </View>
   );
 };
@@ -180,11 +259,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.md,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
+  },
   suggestion: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.base,
+  },
+  suggestionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
 });

@@ -82,7 +82,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
     try {
       // Get stream URL
-      const url = await getStreamUrl(song.videoId);
+      const url = song.streamUrl || await getStreamUrl(song.videoId);
 
       if (!keepQueue) {
         const incomingQueue = queue || [song];

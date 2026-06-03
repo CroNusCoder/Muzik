@@ -13,12 +13,14 @@ export interface Song {
   album?: string;
   duration?: number; // seconds
   thumbnail?: string;
+  streamUrl?: string;
 }
 
 interface SongRowProps {
   song: Song;
   index?: number;
   onPress: (song: Song) => void;
+  onOptionsPress?: (song: Song) => void;
   showIndex?: boolean;
   showDuration?: boolean;
   active?: boolean;
@@ -35,6 +37,7 @@ export const SongRow: React.FC<SongRowProps> = ({
   song,
   index,
   onPress,
+  onOptionsPress,
   showIndex = false,
   showDuration = true,
   active = false,
@@ -44,6 +47,7 @@ export const SongRow: React.FC<SongRowProps> = ({
       <TouchableOpacity
         activeOpacity={0.6}
         onPress={() => onPress(song)}
+        onLongPress={() => onOptionsPress?.(song)}
         style={styles.container}
       >
         {/* Index or playing indicator */}
@@ -78,6 +82,18 @@ export const SongRow: React.FC<SongRowProps> = ({
             {formatDuration(song.duration)}
           </Label>
         )}
+
+        {/* Options Button */}
+        {onOptionsPress && (
+          <TouchableOpacity
+            activeOpacity={0.6}
+            onPress={() => onOptionsPress(song)}
+            style={styles.optionsButton}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Label style={styles.optionsLabel}>⋮</Label>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
       <Divider />
     </>
@@ -104,5 +120,14 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     minWidth: 36,
     textAlign: 'right',
+  },
+  optionsButton: {
+    paddingLeft: Spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  optionsLabel: {
+    fontSize: FontSizes.lg,
+    color: Colors.textSecondary,
   },
 });
