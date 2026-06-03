@@ -49,12 +49,18 @@ export const LibraryScreen: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgressText, setImportProgressText] = useState('');
 
+  // Playlist Search & Rename State
+  const [playlistSearchQuery, setPlaylistSearchQuery] = useState('');
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [renamePlaylistId, setRenamePlaylistId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
   // Song Options Modal State (for recently played history songs)
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [optionsVisible, setOptionsVisible] = useState(false);
 
   const { playSong } = usePlayerStore();
-  const { playlists, loadPlaylists, createPlaylist, deletePlaylist, removeSongFromPlaylist, addSongToPlaylist } = usePlaylistStore();
+  const { playlists, loadPlaylists, createPlaylist, deletePlaylist, removeSongFromPlaylist, addSongToPlaylist, renamePlaylist } = usePlaylistStore();
 
   const load = useCallback(async () => {
     const [s, h] = await Promise.all([getStats(), getHistory()]);
@@ -180,6 +186,31 @@ export const LibraryScreen: React.FC = () => {
     );
   };
 
+  const handleRenamePress = () => {
+    if (!selectedPlaylist) return;
+    setRenamePlaylistId(selectedPlaylist.id);
+    setRenameValue(selectedPlaylist.name);
+    setRenameModalVisible(true);
+  };
+
+  const handleRenameSave = async () => {
+    const newName = renameValue.trim();
+    if (!newName || !renamePlaylistId) return;
+
+    try {
+      await renamePlaylist(renamePlaylistId, newName);
+      // Immediately reflect rename in details modal
+      setSelectedPlaylist(prev => prev ? { ...prev, name: newName } : null);
+      setRenameModalVisible(false);
+      setRenamePlaylistId(null);
+      setRenameValue('');
+      await loadPlaylists();
+    } catch (err) {
+      console.error('Failed to rename playlist:', err);
+      Alert.alert('Error', 'Failed to rename playlist.');
+    }
+  };
+
   const handleHistoryPlay = (entry: HistoryEntry) => {
     // Construct a temporary Song object from HistoryEntry
     const song: Song = {
@@ -203,6 +234,10 @@ export const LibraryScreen: React.FC = () => {
     setSelectedSong(song);
     setOptionsVisible(true);
   };
+
+  const filteredPlaylists = playlists.filter(p =>
+    p.name.toLowerCase().includes(playlistSearchQuery.toLowerCase())
+  );
 
   return (
     <View style={styles.root}>
@@ -281,7 +316,22 @@ export const LibraryScreen: React.FC = () => {
         </View>
         <Divider />
 
-        {playlists.map((playlist) => (
+        {playlists.length > 0 && (
+          <>
+            <TextInput
+              style={styles.playlistSearchInput}
+              value={playlistSearchQuery}
+              onChangeText={setPlaylistSearchQuery}
+              placeholder="SEARCH PLAYLISTS..."
+              placeholderTextColor={Colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Divider />
+          </>
+        )}
+
+        {filteredPlaylists.map((playlist) => (
           <React.Fragment key={playlist.id}>
             <TouchableOpacity
               style={styles.playlistRow}
@@ -304,6 +354,13 @@ export const LibraryScreen: React.FC = () => {
             <Divider />
           </React.Fragment>
         ))}
+
+        {playlists.length > 0 && filteredPlaylists.length === 0 && (
+          <View style={styles.empty}>
+            <Text family="serif" size="lg" color={Colors.textMuted}>No match.</Text>
+            <Label style={{ marginTop: Spacing.sm }}>TRY A DIFFERENT SEARCH QUERY</Label>
+          </View>
+        )}
 
         {playlists.length === 0 && (
           <View style={styles.empty}>
@@ -467,6 +524,51 @@ export const LibraryScreen: React.FC = () => {
         </TouchableOpacity>
       </Modal>
 
+      {/* Playlist Renaming Dialog Modal */}
+      <Modal
+        transparent
+        visible={renameModalVisible}
+        animationType="fade"
+        onRequestClose={() => { setRenameModalVisible(false); setRenamePlaylistId(null); setRenameValue(''); }}
+      >
+        <TouchableOpacity
+          style={styles.dialogOverlay}
+          activeOpacity={1}
+          onPress={() => { setRenameModalVisible(false); setRenamePlaylistId(null); setRenameValue(''); }}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.dialogCard}>
+            <Title>RENAME PLAYLIST</Title>
+            <Divider style={{ marginVertical: Spacing.md }} />
+            <TextInput
+              style={styles.dialogInput}
+              value={renameValue}
+              onChangeText={setRenameValue}
+              placeholder="Enter new name..."
+              placeholderTextColor={Colors.textMuted}
+              autoFocus
+              maxLength={30}
+              selectTextOnFocus
+            />
+            <Divider style={{ marginVertical: Spacing.md }} />
+            <View style={styles.dialogButtons}>
+              <TouchableOpacity
+                style={styles.dialogButton}
+                onPress={() => { setRenameModalVisible(false); setRenamePlaylistId(null); setRenameValue(''); }}
+              >
+                <Label>CANCEL</Label>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dialogButton, !renameValue.trim() && { opacity: 0.4 }]}
+                onPress={handleRenameSave}
+                disabled={!renameValue.trim()}
+              >
+                <Text family="mono" size="xs" color={Colors.white} weight="bold">SAVE</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Playlist Details Modal */}
       <Modal
         visible={playlistDetailVisible}
@@ -515,6 +617,13 @@ export const LibraryScreen: React.FC = () => {
                       onPress={handleDeletePlaylist}
                     >
                       <Text family="mono" size="sm" weight="bold" color={Colors.textSecondary}>✕  DELETE</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.renameButton}
+                      activeOpacity={0.8}
+                      onPress={handleRenamePress}
+                    >
+                      <Text family="mono" size="sm" weight="bold" color={Colors.textSecondary}>✎  RENAME</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -728,5 +837,24 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing['3xl'],
     paddingHorizontal: Spacing.base,
     alignItems: 'center',
+  },
+  playlistSearchInput: {
+    fontFamily: 'SpaceMono-Regular',
+    fontSize: FontSizes.sm,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.surfaceElevated,
+    borderColor: Colors.border,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginHorizontal: Spacing.base,
+    marginVertical: Spacing.sm,
+  },
+  renameButton: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.sm,
   },
 });
